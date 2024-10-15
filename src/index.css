@@ -1,0 +1,46 @@
+html {
+    /* Remove touch delay: */
+    touch-action: manipulation;
+}
+
+body {
+    /* Light mode background color for what is not covered by the egui canvas,
+                or where the egui canvas is translucent. */
+    background: #000000;
+}
+
+/* Allow canvas to fill entire web page: */
+html,
+body {
+    overflow: hidden;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 100%;
+    width: 100%;
+}
+
+/* Position canvas in center-top: */
+canvas {
+    margin-right: auto;
+    margin-left: auto;
+    display: block;
+    position: absolute;
+    top: 0%;
+    left: 50%;
+    transform: translate(-50%, 0%);
+    color: #000000;
+}
+
+.centered {
+    margin-right: auto;
+    margin-left: auto;
+    display: block;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+    font-family: Ubuntu-Light, Helvetica, sans-serif;
+    text-align: center;
+    image-transform: pixelated;
+}

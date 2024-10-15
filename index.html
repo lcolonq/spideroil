@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <head>
+        <meta charset="UTF-8">
+        <link data-trunk rel="copy-file" href="src/helpers.js" />
+        <script type="module" src="helpers.js"></script>
+        <link data-trunk rel="rust" data-wasm-opt="2" />
+        <!-- <link data-trunk rel="rust" data-keep-debug="true" /> -->
+        <base data-trunk-public-url />
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content="white">
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#404040">
+        <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+        <link data-trunk rel="css" href="src/index.css" />
+        <title>spider oil</title>
+    </head>
+    <body>
+        <script>
+         addEventListener("TrunkApplicationStarted", async (event) => {
+             console.log("initialized, starting...");
+             window.wasmBindings.main_js();
+         });
+        </script>
+        <div id="teleia-parent"></div>
+    </body>
+</html>

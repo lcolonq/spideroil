@@ -1,0 +1,29 @@
+[package]
+name = "spideroil"
+version = "0.1.0"
+authors = ["LLLL Colonq <llll@colonq.computer>"]
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+opt-level = 2
+codegen-units = 1
+
+[profile.dev.package."*"]
+opt-level = 2
+
+[dependencies]
+# teleia = { git = "https://github.com/lcolonq/teleia" } # engine
+teleia = { path = "../teleia" } # engine
+glam = "*" # linear algebra
+bitflags = "*" # C-style bitwise flags
+rand = "*" # rng
+log = "*" # logging
+lazy_static = "*" # global constants
+wasm-bindgen = "*" # wasm bindings
+wasm-bindgen-futures = "*" # interface with async javascript
+strum = {version = "*", features = ["derive"]} # utility macros for enums
+lexpr = "*" # s-expression parsing
+reqwest = "*" # HTTP requests

@@ -1,0 +1,14 @@
+{ "columns":135,
+ "image":"..\/..\/..\/..\/..\/onewilliamdollars.jpg",
+ "imageheight":557,
+ "imagewidth":1080,
+ "margin":0,
+ "name":"onewilliamdollars",
+ "spacing":0,
+ "tilecount":9315,
+ "tiledversion":"1.11.2",
+ "tileheight":8,
+ "tilewidth":8,
+ "type":"tileset",
+ "version":"1.10"
+}

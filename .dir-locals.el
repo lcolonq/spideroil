@@ -1,1 +1,1 @@
-((rustic-mode  . ((lsp-rust-analyzer-cargo-target . "wasm32-unknown-unknown"))))
+((rust-mode  . ((eglot-workspace-configuration . (:rust-analyzer (:cargo (:target "wasm32-unknown-unknown")))))))

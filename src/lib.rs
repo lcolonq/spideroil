@@ -35,7 +35,7 @@ impl Tilesheet {
 }
 
 struct Assets {
-    font: font::Font,
+    font: font::Bitmap,
     shader_flat: shader::Shader,
     shader_sheet: shader::Shader,
     mesh_square: mesh::Mesh,
@@ -46,7 +46,7 @@ struct Assets {
 impl Assets {
     fn new(ctx: &context::Context) -> Self {
         Self {
-            font: font::Font::new(ctx),
+            font: font::Bitmap::new(ctx),
             shader_flat: shader::Shader::new(
                 ctx,
                 include_str!("assets/shaders/flat/vert.glsl"),
@@ -57,7 +57,7 @@ impl Assets {
                 include_str!("assets/shaders/sheet/vert.glsl"),
                 include_str!("assets/shaders/sheet/frag.glsl"),
             ),
-            mesh_square: mesh::Mesh::new(ctx, include_bytes!("assets/meshes/square.obj")),
+            mesh_square: mesh::Mesh::from_obj(ctx, include_bytes!("assets/meshes/square.obj")),
             tilesheet_player: Tilesheet::new(ctx, 16, 8, 1, include_bytes!("assets/textures/player.png")),
             tilesheet_town: Tilesheet::new(ctx, 16, 13, 4, include_bytes!("assets/textures/fftown.png")),
         }
@@ -186,215 +186,260 @@ impl Facing {
     }
 }
 
-struct Game {
-    assets: Assets,
-    tiles: tiles::Tiles,
-    page: Option<Page>,
-    player_facing: Facing,
-    player_pos: glam::Vec2,
-    link_target_pos: Option<(f32, f32)>,
-}
+// struct Game {
+//     assets: Assets,
+//     tiles: tiles::Tiles,
+//     page: Option<Page>,
+//     player_facing: Facing,
+//     player_pos: glam::Vec2,
+//     link_target_pos: Option<(f32, f32)>,
+// }
+// 
+// impl Game {
+//     async fn new(ctx: &context::Context) -> Self {
+//         log::info!("{:?}", level2d::tiled::Level::new(include_str!("../levels/test.json")));
+//         Self {
+//             assets: Assets::new(ctx),
+//             tiles: tiles::Tiles::new(),
+//             page: None,
+//             player_facing: Facing::South,
+//             player_pos: glam::Vec2::new(0.0, 0.0),
+//             link_target_pos: None,
+//         }
+//     }
+// 
+//     fn load<U>(&mut self, _ctx: &context::Context, st: &mut state::State, url: U) where U: reqwest::IntoUrl {
+//         self.page = None;
+//         let u = url.into_url().expect("failed to convert to URL");
+//         log::info!("loading: {}", u);
+//         st.request(|c| {
+//             c.get(u.clone())
+//         });
+//     }
+// 
+//     fn tile_at(&self, x: f32, y: f32) -> Option<String> {
+//         let tx = (x / TILE_DIM) as u32;
+//         let ty = (y / TILE_DIM) as u32;
+//         if let Some(p) = &self.page {
+//             p.map.get(&(tx, ty)).cloned()
+//         } else {
+//             None
+//         }
+//     }
+// 
+//     fn player_collides_at(&self, pos: glam::Vec2) -> bool {
+//         let p = if let Some(p) = &self.page {p} else { return false };
+//         for ((ix, iy), _) in p.map.iter() {
+//             if rect_collide(pos.x, pos.y, *ix as f32 * TILE_DIM, *iy as f32 * TILE_DIM) {
+//                 return true
+//             }
+//         }
+//         false
+//     }
+//     
+//     fn player_links_at(&self, pos: glam::Vec2) -> Option<String> {
+//         let p = if let Some(p) = &self.page {p} else { return None };
+//         for ((ix, iy), l) in p.links.iter() {
+//             if rect_collide(pos.x, pos.y, *ix as f32 * TILE_DIM, *iy as f32 * TILE_DIM) {
+//                 return Some(l.clone())
+//             }
+//         }
+//         None
+//     }
+// 
+//     fn render_tile_index(
+//         &self, ctx: &context::Context, st: &mut state::State,
+//         ts: &Tilesheet, tx: u32, ty: u32, flip: bool,
+//         pos: glam::Vec2,
+//     ) {
+//         let dim = ts.dim as f32;
+//         let w = 1.0 / ts.w as f32;
+//         let h = 1.0 / ts.h as f32;
+//         st.bind_2d(ctx, &self.assets.shader_sheet);
+//         self.assets.shader_sheet.set_f32(ctx, "tile_w", w);
+//         self.assets.shader_sheet.set_f32(ctx, "tile_h", h);
+//         self.assets.shader_sheet.set_f32(ctx, "tile_x", tx as f32 * w);
+//         self.assets.shader_sheet.set_f32(ctx, "tile_y", ty as f32 * h);
+//         self.assets.shader_sheet.set_f32(ctx, "inv_x", if flip { 1.0 } else { 0.0 });
+//         self.assets.shader_sheet.set_position_2d(ctx, &pos, &glam::Vec2::new(dim, dim));
+//         ts.texture.bind(ctx);
+//         self.assets.mesh_square.render(ctx);
+//     }
+// 
+//     fn get_tilesheet(&self, t: &tiles::Tileset) -> &Tilesheet {
+//         match t {
+//             tiles::Tileset::Town => &self.assets.tilesheet_town,
+//         }
+//     }
+//     fn render_tile(&self, ctx: &context::Context, st: &mut state::State, tile: &str, flip: bool, pos: glam::Vec2) {
+//         if let Some(tiles::Tiledef(t, x, y)) = self.tiles.tiles.get(tile) {
+//             self.render_tile_index(ctx, st, self.get_tilesheet(&t), *x, *y, flip, pos)
+//         } else {
+//             log::warn!("could not find tile: {}", tile);
+//         }
+//     }
+//     fn render_map(&self, ctx: &context::Context, st: &mut state::State) {
+//         if let Some(p) = &self.page {
+//             // log::info!("rendering: {} {}", p.width, p.height);
+//             for x in 0..p.width {
+//                 for y in 0..p.height {
+//                     let t = p.map.get(&(x, y)).unwrap_or(&p.bg_tile);
+//                     let fx = x as f32;
+//                     let fy = y as f32;
+//                     self.render_tile(ctx, st, t, true, glam::Vec2::new(fx * TILE_DIM, fy * TILE_DIM));
+//                 }
+//             }
+//         }
+//     }
+//     fn render_player(&self, ctx: &context::Context, st: &mut state::State) {
+//         let walkcycle = if st.keys.up() || st.keys.down() || st.keys.left() || st.keys.right() {
+//             ((st.tick / 15) % 2) as u32
+//         } else {
+//             0
+//         };
+//         let (offset, flip) = self.player_facing.tile_offset_and_flip(walkcycle);
+//         self.render_tile_index(
+//             ctx, st, &self.assets.tilesheet_player,
+//             offset, 0, flip,
+//             glam::Vec2::new(self.player_pos.x.floor(), self.player_pos.y.floor()),
+//         );
+//     }
+// }
+// 
+// impl teleia::state::Game for Game {
+//     fn initialize_audio(&self, _ctx: &context::Context, _st: &state::State, actx: &audio::Context) -> HashMap<String, audio::Audio> {
+//         HashMap::from_iter(vec![
+//             ("test".to_owned(), audio::Audio::new(&actx, include_bytes!("assets/audio/test.wav"))),
+//         ])
+//     }
+//     fn finish_title(&mut self, _st: &mut state::State) {
+//     }
+//     fn request_return(&mut self, _ctx: &context::Context, _st: &mut state::State, res: state::Response) {
+//         let str = String::from_utf8_lossy(&res.body).into_owned();
+//         let url = res.url;
+//         if let Ok(tree) = lexpr::from_str(&str) {
+//             let p = Page::new(url, tree);
+//             let spawn = if let Some(sp) = self.link_target_pos {
+//                 sp
+//             } else {
+//                 p.spawn
+//             };
+//             self.player_pos = glam::Vec2::new(spawn.0 * TILE_DIM, spawn.1 * TILE_DIM);
+//             self.link_target_pos = None;
+//             self.page = Some(p);
+//             log::info!("loaded page: {:?}", self.page);
+//         } else {
+//             log::warn!("failed to decode page: {}", url);
+//         }
+//     }
+//     fn update(&mut self, ctx: &context::Context, st: &mut state::State) -> Erm<()> {
+//         if self.page.is_none() && !st.requesting() {
+//             self.load(ctx, st, "https://pub.colonq.computer/~llll/spider/test.sp");
+//         }
+// 
+//         let mut offset = glam::Vec2::new(0.0, 0.0);
+//         if st.keys.left() {
+//             self.player_facing = Facing::West;
+//             offset += PLAYER_SPEED * glam::Vec2::new(-1.0, 0.0);
+//         }
+//         if st.keys.right() {
+//             self.player_facing = Facing::East;
+//             offset += PLAYER_SPEED * glam::Vec2::new(1.0, 0.0);
+//         }
+//         if st.keys.up() {
+//             self.player_facing = Facing::North;
+//             offset += PLAYER_SPEED * glam::Vec2::new(0.0, -1.0);
+//         }
+//         if st.keys.down() {
+//             self.player_facing = Facing::South;
+//             offset += PLAYER_SPEED * glam::Vec2::new(0.0, 1.0);
+//         }
+//         let offset = offset.normalize_or_zero();
+//         if let Some(lf) = self.player_links_at(self.player_pos + offset) {
+//             log::info!("lf: {}", lf);
+//             let mut itr = lf.split('#'); 
+//             if let Some(l) = itr.next() {
+//                 log::info!("l: {}", l);
+//                 if let Some(frag) = itr.next() {
+//                     log::info!("frag: {}", frag);
+//                     let mut fitr = frag.split(',');
+//                     if let (Some(x), Some(y)) = (
+//                         fitr.next().and_then(|x| x.parse::<f32>().ok()),
+//                         fitr.next().and_then(|y| y.parse::<f32>().ok()),
+//                     ) {
+//                         log::info!("x, y: {:?}", (x, y));
+//                         self.link_target_pos = Some((x, y));
+//                     }
+//                 }
+//                 self.load(ctx, st, l);
+//             }
+//         } else {
+//             if !self.player_collides_at(self.player_pos + glam::Vec2::new(offset.x, 0.0)) {
+//                 self.player_pos = self.player_pos + glam::Vec2::new(offset.x, 0.0);
+//             }
+//             if !self.player_collides_at(self.player_pos + glam::Vec2::new(0.0, offset.y)) {
+//                 self.player_pos = self.player_pos + glam::Vec2::new(0.0, offset.y);
+//             }
+//         }
+//         Ok(())
+//     }
+//     fn render(&mut self, ctx: &context::Context, st: &mut state::State) -> Erm<()> {
+//         ctx.clear();
+//         self.render_map(ctx, st);
+//         self.render_player(ctx, st);
+//         Ok(())
+//     }
+// }
 
+struct Game {
+    test: texture::Texture,
+    shader: shader::Shader,
+    mesh: mesh::Mesh,
+    tassets: level2d::tiled::Assets,
+    level: level2d::tiled::Level,
+    renderer: level2d::tiled::LevelRenderer,
+}
 impl Game {
     async fn new(ctx: &context::Context) -> Self {
-        log::info!("1: {}", rect_collide(5.0, 5.0, 6.0, 6.0));
-        log::info!("2: {}", rect_collide(6.0, 6.0, 5.0, 5.0));
-        log::info!("3: {}", rect_collide(6.0, 5.0, 5.0, 6.0));
-        log::info!("4: {}", rect_collide(5.0, 6.0, 6.0, 5.0));
+        let mut tassets = level2d::tiled::Assets::new();
+        tassets.load(ctx, "cave", include_str!("assets/tilesets/cave.tsj"), include_bytes!("assets/tilesets/cave.png")).unwrap();
+        tassets.load(ctx, "mrgreen", include_str!("assets/tilesets/mrgreen.tsj"), include_bytes!("assets/tilesets/mrgreen.png")).unwrap();
+        tassets.load(ctx, "onewilliamdollars", include_str!("assets/tilesets/onewilliamdollars.tsj"), include_bytes!("assets/tilesets/onewilliamdollars.jpg")).unwrap();
+        let level = level2d::tiled::Level::new(include_str!("assets/levels/test.tmj")).unwrap();
+        let mut renderer = level2d::tiled::LevelRenderer::new(ctx, &level).unwrap();
+        renderer.populate(ctx, &tassets, &level).unwrap();
         Self {
-            assets: Assets::new(ctx),
-            tiles: tiles::Tiles::new(),
-            page: None,
-            player_facing: Facing::South,
-            player_pos: glam::Vec2::new(0.0, 0.0),
-            link_target_pos: None,
+            test: texture::Texture::new(ctx, include_bytes!("assets/textures/chocojdog.png")),
+            shader: shader::Shader::new(
+                ctx,
+                include_str!("assets/shaders/flat/vert.glsl"),
+                include_str!("assets/shaders/flat/frag.glsl"),
+            ),
+            mesh: mesh::Mesh::from_obj(ctx, include_bytes!("assets/meshes/square.obj")),
+            tassets,
+            level,
+            renderer,
         }
-    }
-
-    fn load<U>(&mut self, _ctx: &context::Context, st: &mut state::State, url: U) where U: reqwest::IntoUrl {
-        self.page = None;
-        let u = url.into_url().expect("failed to convert to URL");
-        log::info!("loading: {}", u);
-        st.request(|c| {
-            c.get(u.clone())
-        });
-    }
-
-    fn tile_at(&self, x: f32, y: f32) -> Option<String> {
-        let tx = (x / TILE_DIM) as u32;
-        let ty = (y / TILE_DIM) as u32;
-        if let Some(p) = &self.page {
-            p.map.get(&(tx, ty)).cloned()
-        } else {
-            None
-        }
-    }
-
-    fn player_collides_at(&self, pos: glam::Vec2) -> bool {
-        let p = if let Some(p) = &self.page {p} else { return false };
-        for ((ix, iy), _) in p.map.iter() {
-            if rect_collide(pos.x, pos.y, *ix as f32 * TILE_DIM, *iy as f32 * TILE_DIM) {
-                return true
-            }
-        }
-        false
-    }
-    
-    fn player_links_at(&self, pos: glam::Vec2) -> Option<String> {
-        let p = if let Some(p) = &self.page {p} else { return None };
-        for ((ix, iy), l) in p.links.iter() {
-            if rect_collide(pos.x, pos.y, *ix as f32 * TILE_DIM, *iy as f32 * TILE_DIM) {
-                return Some(l.clone())
-            }
-        }
-        None
-    }
-
-    fn render_tile_index(
-        &self, ctx: &context::Context, st: &mut state::State,
-        ts: &Tilesheet, tx: u32, ty: u32, flip: bool,
-        pos: glam::Vec2,
-    ) {
-        let dim = ts.dim as f32;
-        let w = 1.0 / ts.w as f32;
-        let h = 1.0 / ts.h as f32;
-        st.bind_2d(ctx, &self.assets.shader_sheet);
-        self.assets.shader_sheet.set_f32(ctx, "tile_w", w);
-        self.assets.shader_sheet.set_f32(ctx, "tile_h", h);
-        self.assets.shader_sheet.set_f32(ctx, "tile_x", tx as f32 * w);
-        self.assets.shader_sheet.set_f32(ctx, "tile_y", ty as f32 * h);
-        self.assets.shader_sheet.set_f32(ctx, "inv_x", if flip { 1.0 } else { 0.0 });
-        self.assets.shader_sheet.set_position_2d(ctx, &pos, &glam::Vec2::new(dim, dim));
-        ts.texture.bind(ctx);
-        self.assets.mesh_square.render(ctx);
-    }
-
-    fn get_tilesheet(&self, t: &tiles::Tileset) -> &Tilesheet {
-        match t {
-            tiles::Tileset::Town => &self.assets.tilesheet_town,
-        }
-    }
-    fn render_tile(&self, ctx: &context::Context, st: &mut state::State, tile: &str, flip: bool, pos: glam::Vec2) {
-        if let Some(tiles::Tiledef(t, x, y)) = self.tiles.tiles.get(tile) {
-            self.render_tile_index(ctx, st, self.get_tilesheet(&t), *x, *y, flip, pos)
-        } else {
-            log::warn!("could not find tile: {}", tile);
-        }
-    }
-    fn render_map(&self, ctx: &context::Context, st: &mut state::State) {
-        if let Some(p) = &self.page {
-            // log::info!("rendering: {} {}", p.width, p.height);
-            for x in 0..p.width {
-                for y in 0..p.height {
-                    let t = p.map.get(&(x, y)).unwrap_or(&p.bg_tile);
-                    let fx = x as f32;
-                    let fy = y as f32;
-                    self.render_tile(ctx, st, t, true, glam::Vec2::new(fx * TILE_DIM, fy * TILE_DIM));
-                }
-            }
-        }
-    }
-    fn render_player(&self, ctx: &context::Context, st: &mut state::State) {
-        let walkcycle = if st.keys.up() || st.keys.down() || st.keys.left() || st.keys.right() {
-            ((st.tick / 15) % 2) as u32
-        } else {
-            0
-        };
-        let (offset, flip) = self.player_facing.tile_offset_and_flip(walkcycle);
-        self.render_tile_index(
-            ctx, st, &self.assets.tilesheet_player,
-            offset, 0, flip,
-            glam::Vec2::new(self.player_pos.x.floor(), self.player_pos.y.floor()),
-        );
     }
 }
-
 impl teleia::state::Game for Game {
-    fn initialize_audio(&self, _ctx: &context::Context, _st: &state::State, actx: &audio::Context) -> HashMap<String, audio::Audio> {
-        HashMap::from_iter(vec![
-            ("test".to_owned(), audio::Audio::new(&actx, include_bytes!("assets/audio/test.wav"))),
-        ])
-    }
-    fn finish_title(&mut self, _st: &mut state::State) {
-    }
-    fn request_return(&mut self, _ctx: &context::Context, _st: &mut state::State, res: state::Response) {
-        let str = String::from_utf8_lossy(&res.body).into_owned();
-        let url = res.url;
-        if let Ok(tree) = lexpr::from_str(&str) {
-            let p = Page::new(url, tree);
-            let spawn = if let Some(sp) = self.link_target_pos {
-                sp
-            } else {
-                p.spawn
-            };
-            self.player_pos = glam::Vec2::new(spawn.0 * TILE_DIM, spawn.1 * TILE_DIM);
-            self.link_target_pos = None;
-            self.page = Some(p);
-            log::info!("loaded page: {:?}", self.page);
-        } else {
-            log::warn!("failed to decode page: {}", url);
-        }
-    }
-    fn update(&mut self, ctx: &context::Context, st: &mut state::State) -> Option<()> {
-        if self.page.is_none() && !st.requesting() {
-            self.load(ctx, st, "https://pub.colonq.computer/~llll/spider/test.sp");
-        }
-
-        let mut offset = glam::Vec2::new(0.0, 0.0);
-        if st.keys.left() {
-            self.player_facing = Facing::West;
-            offset += PLAYER_SPEED * glam::Vec2::new(-1.0, 0.0);
-        }
-        if st.keys.right() {
-            self.player_facing = Facing::East;
-            offset += PLAYER_SPEED * glam::Vec2::new(1.0, 0.0);
-        }
-        if st.keys.up() {
-            self.player_facing = Facing::North;
-            offset += PLAYER_SPEED * glam::Vec2::new(0.0, -1.0);
-        }
-        if st.keys.down() {
-            self.player_facing = Facing::South;
-            offset += PLAYER_SPEED * glam::Vec2::new(0.0, 1.0);
-        }
-        let offset = offset.normalize_or_zero();
-        if let Some(lf) = self.player_links_at(self.player_pos + offset) {
-            log::info!("lf: {}", lf);
-            let mut itr = lf.split('#'); 
-            if let Some(l) = itr.next() {
-                log::info!("l: {}", l);
-                if let Some(frag) = itr.next() {
-                    log::info!("frag: {}", frag);
-                    let mut fitr = frag.split(',');
-                    if let (Some(x), Some(y)) = (
-                        fitr.next().and_then(|x| x.parse::<f32>().ok()),
-                        fitr.next().and_then(|y| y.parse::<f32>().ok()),
-                    ) {
-                        log::info!("x, y: {:?}", (x, y));
-                        self.link_target_pos = Some((x, y));
-                    }
-                }
-                self.load(ctx, st, l);
-            }
-        } else {
-            if !self.player_collides_at(self.player_pos + glam::Vec2::new(offset.x, 0.0)) {
-                self.player_pos = self.player_pos + glam::Vec2::new(offset.x, 0.0);
-            }
-            if !self.player_collides_at(self.player_pos + glam::Vec2::new(0.0, offset.y)) {
-                self.player_pos = self.player_pos + glam::Vec2::new(0.0, offset.y);
-            }
-        }
-        Some(())
-    }
-    fn render(&mut self, ctx: &context::Context, st: &mut state::State) -> Option<()> {
+    fn render(&mut self, ctx: &context::Context, st: &mut state::State) -> Erm<()> {
         ctx.clear();
-        self.render_map(ctx, st);
-        self.render_player(ctx, st);
-        Some(())
+        st.bind_2d(ctx, &self.shader);
+        self.shader.set_position_2d(
+            ctx,
+            &glam::Vec2::new(0.0, 0.0),
+            &glam::Vec2::new(100.0, 100.0),
+        );
+        self.test.bind(ctx);
+        self.mesh.render(ctx);
+        self.renderer.render(ctx, &self.tassets, &self.level).unwrap();
+        Ok(())
     }
 }
 
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub async fn main_js() {
-    teleia::run(Game::new).await;
+    teleia::run(240, 160, teleia::Options::empty(), Game::new).await;
 }

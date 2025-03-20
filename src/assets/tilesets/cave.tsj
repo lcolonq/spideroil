@@ -1,0 +1,14 @@
+{ "columns":8,
+ "image":"..\/..\/..\/..\/upsidedowncake\/games\/cave\/assets\/cave.png",
+ "imageheight":64,
+ "imagewidth":64,
+ "margin":0,
+ "name":"cave",
+ "spacing":0,
+ "tilecount":64,
+ "tiledversion":"1.11.2",
+ "tileheight":8,
+ "tilewidth":8,
+ "type":"tileset",
+ "version":"1.10"
+}
